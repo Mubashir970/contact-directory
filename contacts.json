@@ -1,17 +1,29 @@
 import json
+from github import Github
 
-# Load contacts from file
-def load_contacts():
+# Authenticate to GitHub
+def authenticate_github(token):
+    g = Github(token)
+    repo = g.get_repo("your-username/contact-directory")  # Replace with your GitHub repo
+    return repo
+
+# Load contacts from GitHub
+def load_contacts(repo):
     try:
-        with open("contacts.json", "r") as file:
-            return json.load(file)
-    except FileNotFoundError:
-        return []
+        file = repo.get_contents("contacts.json")
+        contacts = json.loads(file.decoded_content.decode())
+        return contacts
+    except:
+        return []  # Return an empty list if the file doesn't exist
 
-# Save contacts to file
-def save_contacts(contacts):
-    with open("contacts.json", "w") as file:
-        json.dump(contacts, file)
+# Save contacts to GitHub
+def save_contacts(repo, contacts):
+    # Update or create the contacts.json file
+    try:
+        file = repo.get_contents("contacts.json")
+        repo.update_file(file.path, "Updating contacts", json.dumps(contacts), file.sha)
+    except:
+        repo.create_file("contacts.json", "Initial contacts file", json.dumps(contacts))
 
 # Display contacts
 def display_contacts(contacts):
@@ -23,8 +35,11 @@ def display_contacts(contacts):
 
 # Main menu
 def main():
-    contacts = load_contacts()
+    token = "your-github-personal-access-token"  # Replace with your GitHub personal access token
+    repo = authenticate_github(token)
+    
     while True:
+        contacts = load_contacts(repo)
         print("\nContact Directory Menu:")
         print("1. Add Contact")
         print("2. View Contacts")
@@ -37,14 +52,14 @@ def main():
             phone = input("Enter contact phone: ")
             email = input("Enter contact email: ")
             contacts.append({"name": name, "phone": phone, "email": email})
-            save_contacts(contacts)
+            save_contacts(repo, contacts)
         elif choice == '2':
             display_contacts(contacts)
         elif choice == '3':
             contact_index = int(input("Enter contact number to delete: ")) - 1
             if 0 <= contact_index < len(contacts):
                 del contacts[contact_index]
-                save_contacts(contacts)
+                save_contacts(repo, contacts)
             else:
                 print("Invalid contact number.")
         elif choice == '4':
@@ -54,3 +69,4 @@ def main():
 
 if __name__ == "__main__":
     main()
+
